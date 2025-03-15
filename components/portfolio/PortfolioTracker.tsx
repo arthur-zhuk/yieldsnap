@@ -74,7 +74,9 @@ const formatCurrency = (value: number): string => {
 
 // Format percentage with 2 decimal places
 const formatPercentage = (value: number): string => {
-  return `${value.toFixed(2)}%`;
+  // Ensure value is a number and not NaN
+  const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
+  return `${safeValue.toFixed(2)}%`;
 };
 
 // Helper function to safely access reward tokens
@@ -87,7 +89,7 @@ const safeRewardTokens = (investment: Investment): RewardToken[] => {
 
 // Helper function to safely access numeric properties
 const safeNumber = (value: any, defaultValue = 0): number => {
-  return typeof value === 'number' ? value : defaultValue;
+  return typeof value === 'number' && !isNaN(value) ? value : defaultValue;
 };
 
 // Helper functions for specific investment properties
@@ -150,11 +152,15 @@ export function PortfolioTracker() {
     volatility: number,
     apy: number
   ): number => {
+    // Ensure inputs are valid numbers
+    const safeVolatility = typeof volatility === 'number' && !isNaN(volatility) ? volatility : 5;
+    const safeApy = typeof apy === 'number' && !isNaN(apy) ? apy : 5;
+    
     // Base score starts at 50 (medium risk)
     let riskScore = 50;
     
     // Adjust based on protocol reputation (simplified)
-    const protocolLower = protocol.toLowerCase();
+    const protocolLower = (protocol || '').toLowerCase();
     if (['uniswap', 'curve', 'aave', 'compound'].some(p => protocolLower.includes(p))) {
       // Well-established protocols reduce risk
       riskScore -= 10;
@@ -170,20 +176,20 @@ export function PortfolioTracker() {
     }
     
     // Adjust based on volatility
-    if (volatility < 5) {
+    if (safeVolatility < 5) {
       riskScore -= 10; // Low volatility reduces risk
-    } else if (volatility > 20) {
+    } else if (safeVolatility > 20) {
       riskScore += 15; // High volatility increases risk
-    } else if (volatility > 10) {
+    } else if (safeVolatility > 10) {
       riskScore += 5; // Medium volatility slightly increases risk
     }
     
     // Adjust based on APY (very high APYs are often riskier)
-    if (apy > 100) {
+    if (safeApy > 100) {
       riskScore += 20; // Very high APY is usually very risky
-    } else if (apy > 50) {
+    } else if (safeApy > 50) {
       riskScore += 10; // High APY increases risk
-    } else if (apy > 20) {
+    } else if (safeApy > 20) {
       riskScore += 5; // Moderate APY slightly increases risk
     }
     
@@ -253,19 +259,37 @@ export function PortfolioTracker() {
 
       // Calculate value for each investment on this day
       portfolio.investments.forEach((investment, index) => {
+        // Ensure investment has a valid startDate
+        if (!investment.startDate) {
+          console.warn('Investment missing startDate:', investment);
+          return;
+        }
+
         const investmentStartDate = new Date(investment.startDate);
+        
+        // Skip invalid dates
+        if (isNaN(investmentStartDate.getTime())) {
+          console.warn('Invalid investment startDate:', investment.startDate);
+          return;
+        }
+        
         const daysSinceStart = differenceInDays(date, investmentStartDate);
         
         // Only include if the investment had started by this date
         if (daysSinceStart >= 0) {
+          // Ensure we have valid numeric values
+          const amount = typeof investment.amount === 'number' && !isNaN(investment.amount) ? investment.amount : 0;
+          const apy = typeof investment.apy === 'number' && !isNaN(investment.apy) ? investment.apy : 0;
+          const volatility = typeof investment.volatility === 'number' && !isNaN(investment.volatility) ? investment.volatility : 5;
+          
           // Calculate base earnings using compound interest formula
-          const dailyRate = investment.apy / 365 / 100;
-          const baseEarnings = investment.amount * Math.pow(1 + dailyRate, daysSinceStart) - investment.amount;
+          const dailyRate = apy / 365 / 100;
+          const baseEarnings = amount * Math.pow(1 + dailyRate, daysSinceStart) - amount;
           
           // Calculate impermanent loss - increases over time based on volatility
           // More realistic model: IL grows with square root of time and is proportional to volatility
-          const ilFactor = Math.sqrt(daysSinceStart / 30) * (investment.volatility / 10); 
-          const impermanentLoss = (investment.amount * ilFactor * 0.01);
+          const ilFactor = Math.sqrt(daysSinceStart / 30) * (volatility / 10); 
+          const impermanentLoss = (amount * ilFactor * 0.01);
           
           // Calculate trading fees - typically 60-80% of yield in AMMs comes from fees
           const tradingFees = baseEarnings * 0.7; // 70% of earnings from trading fees
@@ -277,7 +301,7 @@ export function PortfolioTracker() {
           const netProfit = tradingFees + rewardTokenValue - impermanentLoss;
           
           // Total value is initial investment plus net profit
-          const value = investment.amount + netProfit;
+          const value = amount + netProfit;
           
           // Update day data - accumulate values from all investments
           dayData.totalValue += value;
@@ -601,14 +625,35 @@ export function PortfolioTracker() {
     const growthMultiplier = 1.5; // Increase growth by 50% for better visualization
     
     const updatedInvestments = currentPortfolio.investments.map(investment => {
+      // Ensure we have valid numeric values
+      const amount = safeNumber(investment.amount, 0);
+      const apy = safeNumber(investment.apy, 5);
+      const currentValue = safeNumber(investment.currentValue, amount);
+      const totalEarnings = safeNumber(investment.totalEarnings, 0);
+      const impermanentLoss = safeNumber(investment.impermanentLoss, 0);
+      const tradingFees = safeNumber(safeTradingFees(investment), 0);
+      
       // Calculate base earnings using APY
-      const dailyRate = (investment.apy / 365 / 100) * growthMultiplier;
-      const dailyEarning = investment.currentValue * dailyRate; // Compound interest
+      const dailyRate = (apy / 365 / 100) * growthMultiplier;
+      const dailyEarning = currentValue * dailyRate; // Compound interest
       
       // Calculate impermanent loss for this day (increases over time)
       // IL is proportional to volatility and increases with time
-      const daysSinceStart = differenceInDays(new Date(), new Date(investment.startDate)) + 1;
-      const dailyImpermanentLoss = (investment.impermanentLoss / Math.sqrt(daysSinceStart)) * 0.1;
+      let daysSinceStart = 1;
+      try {
+        if (investment.startDate) {
+          const startDate = new Date(investment.startDate);
+          if (!isNaN(startDate.getTime())) {
+            daysSinceStart = differenceInDays(new Date(), startDate) + 1;
+            // Ensure daysSinceStart is at least 1 to avoid division by zero
+            daysSinceStart = Math.max(1, daysSinceStart);
+          }
+        }
+      } catch (e) {
+        console.error('Error calculating days since start:', e);
+      }
+      
+      const dailyImpermanentLoss = (impermanentLoss / Math.sqrt(daysSinceStart)) * 0.1;
       
       // Calculate trading fees (70% of earnings)
       const dailyTradingFees = dailyEarning * 0.7;
@@ -616,33 +661,44 @@ export function PortfolioTracker() {
       // Calculate reward tokens (30% of earnings)
       const dailyRewardValue = dailyEarning * 0.3;
       
-      // Update reward tokens
-      const updatedRewardTokens = safeRewardTokens(investment).map(token => ({
-        ...token,
-        amount: token.amount + (dailyRewardValue / token.value) * token.amount,
-        value: token.value + dailyRewardValue
-      }));
+      // Update reward tokens - handle potential errors
+      let updatedRewardTokens = [];
+      try {
+        updatedRewardTokens = safeRewardTokens(investment).map(token => {
+          const tokenValue = safeNumber(token.value, 1);
+          const tokenAmount = safeNumber(token.amount, 0);
+          return {
+            ...token,
+            amount: tokenAmount + (dailyRewardValue / tokenValue) * tokenAmount,
+            value: tokenValue + dailyRewardValue
+          };
+        });
+      } catch (e) {
+        console.error('Error updating reward tokens:', e);
+        updatedRewardTokens = safeRewardTokens(investment);
+      }
       
       // Calculate net earnings (trading fees + rewards - impermanent loss)
       const netDailyEarning = dailyTradingFees + dailyRewardValue - dailyImpermanentLoss;
-      const newTotalEarnings = investment.totalEarnings + netDailyEarning;
-      const newCurrentValue = investment.amount + newTotalEarnings;
+      const newTotalEarnings = totalEarnings + netDailyEarning;
+      const newCurrentValue = amount + newTotalEarnings;
       
       return {
         ...investment,
-        dailyEarnings: [...investment.dailyEarnings, netDailyEarning],
+        dailyEarnings: [...(investment.dailyEarnings || []), netDailyEarning],
         totalEarnings: newTotalEarnings,
         currentValue: newCurrentValue,
-        impermanentLoss: investment.impermanentLoss + dailyImpermanentLoss,
-        tradingFees: safeTradingFees(investment) + dailyTradingFees,
+        impermanentLoss: impermanentLoss + dailyImpermanentLoss,
+        tradingFees: tradingFees + dailyTradingFees,
         rewardTokens: updatedRewardTokens.length > 0 ? updatedRewardTokens : investment.rewardTokens
       };
     });
 
-    const totalInvested = updatedInvestments.reduce((sum, inv) => sum + inv.amount, 0);
-    const totalCurrentValue = updatedInvestments.reduce((sum, inv) => sum + inv.currentValue, 0);
+    const totalInvested = updatedInvestments.reduce((sum, inv) => sum + safeNumber(inv.amount, 0), 0);
+    const totalCurrentValue = updatedInvestments.reduce((sum, inv) => sum + safeNumber(inv.currentValue, 0), 0);
     const totalEarnings = totalCurrentValue - totalInvested;
-    const averageApy = updatedInvestments.reduce((sum, inv) => sum + (inv.apy * inv.amount), 0) / totalInvested || 0;
+    const averageApy = totalInvested > 0 ? 
+      updatedInvestments.reduce((sum, inv) => sum + (safeNumber(inv.apy, 0) * safeNumber(inv.amount, 0)), 0) / totalInvested : 0;
 
     return {
       investments: updatedInvestments,
@@ -971,8 +1027,11 @@ export function PortfolioTracker() {
                   />
                   <Tooltip 
                     formatter={(value: number, name: string) => {
+                      // Check for NaN and use 0 instead
+                      const safeValue = isNaN(value) ? 0 : value;
+                      
                       // Format value as currency
-                      const formattedValue = `$${value.toLocaleString(undefined, {
+                      const formattedValue = `$${safeValue.toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                       })}`;
