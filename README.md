@@ -1,6 +1,11 @@
-# YieldSnap - DeFi Yield Scanner
+# YieldSnap
 
-YieldSnap is a web application that helps DeFi users find the best yield farming opportunities across multiple protocols. It connects to a user's wallet, scans yield farming opportunities across selected DeFi protocols (e.g., Aave, Compound), displays the best APRs for their assets, and lets them deposit with one click.
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![Web3](https://img.shields.io/badge/Web3-F16822?style=for-the-badge&logo=web3.js&logoColor=white)
+![Polygon](https://img.shields.io/badge/Polygon-8247E5?style=for-the-badge&logo=polygon&logoColor=white)
+
+DeFi yield scanner that helps users find the best yield farming opportunities across multiple protocols. Connect your wallet, scan yield opportunities, and deposit with one click.
 
 ## Features
 
@@ -10,44 +15,50 @@ YieldSnap is a web application that helps DeFi users find the best yield farming
 - **One-Click Deposit**: Easily deposit into the highest-yield protocol
 - **Gas Estimation**: See estimated gas costs before depositing
 
-## Getting Started
+## Tech Stack
+
+- **Frontend**: Next.js, React, TailwindCSS
+- **Blockchain Interaction**: ethers.js, wagmi
+- **Wallet Connection**: Web3Modal
+- **DeFi Protocols**: Aave, Compound (on Polygon)
+- **Language**: TypeScript
+
+## Installation
+
+```bash
+git clone https://github.com/arthur-zhuk/yieldsnap.git
+cd yieldsnap
+npm install
+```
 
 ### Prerequisites
 
 - Node.js 18+ and npm
 - MetaMask or another Web3 wallet
 
-### Installation
+### Environment Setup
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/yield-snap.git
-   cd yield-snap
-   ```
+Create a `.env.local` file in the root directory with your WalletConnect Project ID:
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+```env
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id_here
+```
 
-3. Create a `.env.local` file in the root directory with your WalletConnect Project ID:
-   ```
-   NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id_here
-   ```
+## Usage
 
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
+```bash
+npm run dev
+```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Technology Stack
+## How to Use
 
-- **Frontend**: Next.js, React, TailwindCSS
-- **Blockchain Interaction**: ethers.js, wagmi
-- **Wallet Connection**: Web3Modal
-- **DeFi Protocols**: Aave, Compound (on Polygon)
+1. **Connect Wallet**: Click "Connect Wallet" and authorize the connection
+2. **View Opportunities**: Browse yield opportunities across Aave and Compound
+3. **Compare APRs**: See which protocol offers the best yield for your assets
+4. **Deposit**: Click "Deposit" to deposit into your chosen protocol
+5. **Monitor**: Track your deposits and yield earnings
 
 ## Roadmap
 
@@ -57,12 +68,12 @@ YieldSnap is a web application that helps DeFi users find the best yield farming
 - [ ] Portfolio tracking for yield earned
 - [ ] Implement gas optimization strategies
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Acknowledgments
 
 - [Aave](https://aave.com/) - For their lending protocol and API
 - [Compound](https://compound.finance/) - For their lending protocol
 - [Polygon](https://polygon.technology/) - For providing a low-fee environment for DeFi
+
+## License
+
+MIT
